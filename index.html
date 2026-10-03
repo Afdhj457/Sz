@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>极小图超分增强器 · 自相似重建</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0e14;
+    color: #e6edf3;
+    min-height: 100vh;
+    padding: 1.5rem;
+  }
+  .app { max-width: 1500px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 1.5rem; }
+  h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #58a6ff, #a371f7, #f778ba);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+  }
+  .subtitle { color: #8b949e; font-size: 0.9rem; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 950px) { .layout { grid-template-columns: 1fr; } }
+
+  .controls {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 14px;
+    padding: 1.5rem;
+    height: fit-content;
+  }
+
+  .section { margin-bottom: 1.4rem; }
+  .section:last-child { margin-bottom: 0; }
+  .section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #58a6ff;
+    margin-bottom: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-title::before {
+    content: '';
+    width: 4px;
+    height: 14px;
+    background: linear-gradient(180deg, #58a6ff, #a371f7);
+    border-radius: 2px;
+  }
+
+  .drop-zone {
+    border: 2px dashed #30363d;
+    border-radius: 12px;
+    padding: 1.6rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #0d1117;
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #58a6ff;
+    background: #11202f;
+  }
+  .drop-zone input { display: none; }
+  .drop-icon {
+    width: 44px; height: 44px;
+    margin: 0 auto 0.6rem;
+    stroke: #58a6ff; stroke-width: 1.5; fill: none;
+  }
+  .drop-text { font-size: 0.9rem; color: #c9d1d9; margin-bottom: 0.3rem; }
+  .drop-hint { font-size: 0.75rem; color: #6e7681; }
+
+  .slider-group { margin-bottom: 1rem; }
+  .slider-group:last-child { margin-bottom: 0; }
+  .slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+    font-size: 0.83rem;
+    color: #c9d1d9;
+  }
+  .slider-value {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 0.78rem;
+    color: #58a6ff;
+    background: #0d1117;
+    padding: 0.12rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #30363d;
+    min-width: 48px;
+    text-align: center;
+  }
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #21262d;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #58a6ff;
+    cursor: pointer;
+    border: 2px solid #0d1117;
+    box-shadow: 0 0 0 1px #58a6ff;
+    transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type="range"]::-moz-range-thumb {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #58a6ff;
+    cursor: pointer;
+    border: 2px solid #0d1117;
+  }
+  .hint { font-size: 0.7rem; color: #6e7681; margin-top: 0.35rem; line-height: 1.4; }
+
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1.4rem;
+  }
+  .btn {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: 1px solid #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .btn:hover:not(:disabled) {
+    background: #30363d;
+    border-color: #8b949e;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(135deg, #238636, #2ea043);
+    border-color: #2ea043;
+    color: white;
+    box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2ea043, #3fb950);
+    box-shadow: 0 6px 18px rgba(46, 160, 67, 0.5);
+    transform: translateY(-1px);
+  }
+  .btn-primary:disabled {
+    background: #21262d;
+    border-color: #30363d;
+    color: #6e7681;
+    box-shadow: none;
+  }
+  .btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+  .previews {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media (max-width: 700px) { .previews { grid-template-columns: 1fr; } }
+
+  .preview-card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-header {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0d1117;
+  }
+  .preview-title { font-size: 0.85rem; font-weight: 600; color: #c9d1d9; }
+  .preview-meta {
+    font-size: 0.7rem;
+    color: #6e7681;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .preview-body {
+    flex: 1;
+    min-height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: 
+      linear-gradient(45deg, #0d1117 25%, transparent 25%),
+      linear-gradient(-45deg, #0d1117 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #0d1117 75%),
+      linear-gradient(-45deg, transparent 75%, #0d1117 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color: #161b22;
+  }
+  .preview-body img {
+    max-width: 100%;
+    max-height: 550px;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    image-rendering: auto;
+  }
+  /* 原图显示时用像素化，让用户直观看到分辨率差异 */
+  .preview-body img.pixelated {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  .empty-state { color: #6e7681; font-size: 0.85rem; text-align: center; }
+
+  .status-bar {
+    margin-top: 1.5rem;
+    padding: 0.9rem 1.1rem;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    font-size: 0.83rem;
+    color: #8b949e;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    min-height: 46px;
+  }
+  .status-bar .dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: #6e7681;
+    flex-shrink: 0;
+  }
+  .status-bar.ready .dot { background: #2ea043; }
+  .status-bar.working .dot { background: #d29922; animation: pulse 1s infinite; }
+  .status-bar.done .dot { background: #2ea043; box-shadow: 0 0 8px #2ea043; }
+  .status-bar.error .dot { background: #f85149; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: #21262d;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar.active { display: block; }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #58a6ff, #a371f7);
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 2px;
+  }
+
+  .preset-btns {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .preset-btn {
+    flex: 1;
+    min-width: 60px;
+    padding: 0.5rem 0.4rem;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #8b949e;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .preset-btn:hover {
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+  .preset-btn.active {
+    background: #1f6feb;
+    border-color: #1f6feb;
+    color: white;
+  }
+  .preset-btn.tiny {
+    border-color: #f778ba;
+    color: #f778ba;
+  }
+  .preset-btn.tiny.active {
+    background: #f778ba;
+    color: #0a0e14;
+    border-color: #f778ba;
+  }
+
+  .badge-tiny {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    background: #f778ba22;
+    color: #f778ba;
+    border: 1px solid #f778ba44;
+    margin-left: 0.3rem;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>极小图超分增强器 · 自相似重建</h1>
+    <p class="subtitle">50×50 也能救 · 边缘导向插值 · 自相似纹理合成 · 形态学细节重建</p>
+  </header>
+
+  <div class="layout">
+    <aside class="controls">
+      <div class="section">
+        <div class="section-title">上传图片</div>
+        <div class="drop-zone" id="dropZone">
+          <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp">
+          <svg class="drop-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <div class="drop-text">点击或拖拽图片</div>
+          <div class="drop-hint">越小效果越明显</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">快速预设</div>
+        <div class="preset-btns">
+          <button class="preset-btn" data-preset="normal">普通</button>
+          <button class="preset-btn" data-preset="strong">强力</button>
+          <button class="preset-btn tiny active" data-preset="tiny">极小图<span class="badge-tiny">推荐</span></button>
+          <button class="preset-btn tiny" data-preset="micro">超小图</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">增强参数</div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>放大倍数</span>
+            <span class="slider-value" id="scaleVal">8.0×</span>
+          </div>
+          <input type="range" id="scaleSlider" min="2" max="20" step="1" value="8">
+          <div class="hint">小图建议 8-20 倍</div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>自相似重建</span>
+            <span class="slider-value" id="selfSimVal">0.8</span>
+          </div>
+          <input type="range" id="selfSimSlider" min="0" max="1.5" step="0.05" value="0.8">
+          <div class="hint">从原图寻找相似纹理补全细节</div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>边缘导向强度</span>
+            <span class="slider-value" id="edgeVal">0.7</span>
+          </div>
+          <input type="range" id="edgeSlider" min="0" max="1.5" step="0.05" value="0.7">
+          <div class="hint">沿边缘方向插值，避免锯齿</div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>形态学细节</span>
+            <span class="slider-value" id="morphVal">0.6</span>
+          </div>
+          <input type="range" id="morphSlider" min="0" max="1.5" step="0.05" value="0.6">
+          <div class="hint">提取结构并强化</div>
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>感知锐化</span>
+            <span class="slider-value" id="sharpenVal">1.0</span>
+          </div>
+          <input type="range" id="sharpenSlider" min="0" max="2" step="0.05" value="1.0">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>对比度增强</span>
+            <span class="slider-value" id="contrastVal">0.8</span>
+          </div>
+          <input type="range" id="contrastSlider" min="0" max="1.5" step="0.05" value="0.8">
+        </div>
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>降噪</span>
+            <span class="slider-value" id="denoiseVal">0.3</span>
+          </div>
+          <input type="range" id="denoiseSlider" min="0" max="1" step="0.05" value="0.3">
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn-primary" id="processBtn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          开始超分重建
+        </button>
+        <button class="btn" id="downloadBtn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载增强图片
+        </button>
+        <button class="btn" id="resetBtn">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 3v6h6"/></svg>
+          重置
+        </button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="previews">
+        <div class="preview-card">
+          <div class="preview-header">
+            <span class="preview-title">原始图片（像素化显示）</span>
+            <span class="preview-meta" id="originalMeta">—</span>
+          </div>
+          <div class="preview-body" id="originalPreview">
+            <div class="empty-state">等待上传图片</div>
+          </div>
+        </div>
+
+        <div class="preview-card">
+          <div class="preview-header">
+            <span class="preview-title">超分重建结果</span>
+            <span class="preview-meta" id="resultMeta">—</span>
+          </div>
+          <div class="preview-body" id="resultPreview">
+            <div class="empty-state">点击「开始超分重建」查看效果</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar" id="statusBar">
+        <span class="dot"></span>
+        <span id="statusText">就绪 · 请上传图片（越小效果越明显）</span>
+      </div>
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ==================== DOM ====================
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const originalPreview = document.getElementById('originalPreview');
+  const resultPreview = document.getElementById('resultPreview');
+  const originalMeta = document.getElementById('originalMeta');
+  const resultMeta = document.getElementById('resultMeta');
+  const processBtn = document.getElementById('processBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusBar = document.getElementById('statusBar');
+  const statusText = document.getElementById('statusText');
+  const progressBar = document.getElementById('progressBar');
+  const progressFill = document.getElementById('progressFill');
+  const presetBtns = document.querySelectorAll('.preset-btn');
+
+  const sliders = {
+    scale: document.getElementById('scaleSlider'),
+    selfSim: document.getElementById('selfSimSlider'),
+    edge: document.getElementById('edgeSlider'),
+    morph: document.getElementById('morphSlider'),
+    sharpen: document.getElementById('sharpenSlider'),
+    contrast: document.getElementById('contrastSlider'),
+    denoise: document.getElementById('denoiseSlider'),
+  };
+  const valueEls = {
+    scale: document.getElementById('scaleVal'),
+    selfSim: document.getElementById('selfSimVal'),
+    edge: document.getElementById('edgeVal'),
+    morph: document.getElementById('morphVal'),
+    sharpen: document.getElementById('sharpenVal'),
+    contrast: document.getElementById('contrastVal'),
+    denoise: document.getElementById('denoiseVal'),
+  };
+
+  // ==================== 状态 ====================
+  let originalImage = null;
+  let originalFileName = '';
+  let resultDataUrl = null;
+  let isProcessing = false;
+
+  // ==================== 预设 ====================
+  const PRESETS = {
+    normal: { scale: 3,  selfSim: 0.4, edge: 0.4, morph: 0.3, sharpen: 0.6, contrast: 0.4, denoise: 0.4 },
+    strong: { scale: 6,  selfSim: 0.7, edge: 0.6, morph: 0.5, sharpen: 1.0, contrast: 0.7, denoise: 0.3 },
+    tiny:   { scale: 8,  selfSim: 0.8, edge: 0.7, morph: 0.6, sharpen: 1.0, contrast: 0.8, denoise: 0.3 },
+    micro:  { scale: 14, selfSim: 1.2, edge: 1.0, morph: 1.0, sharpen: 1.4, contrast: 1.1, denoise: 0.25 },
+  };
+
+  function applyPreset(name) {
+    const p = PRESETS[name];
+    if (!p) return;
+    sliders.scale.value = p.scale;
+    sliders.selfSim.value = p.selfSim;
+    sliders.edge.value = p.edge;
+    sliders.morph.value = p.morph;
+    sliders.sharpen.value = p.sharpen;
+    sliders.contrast.value = p.contrast;
+    sliders.denoise.value = p.denoise;
+    updateAllLabels();
+
+    presetBtns.forEach(b => {
+      b.classList.toggle('active', b.dataset.preset === name);
+    });
+  }
+
+  function updateAllLabels() {
+    valueEls.scale.textContent = parseFloat(sliders.scale.value).toFixed(1) + '×';
+    valueEls.selfSim.textContent = parseFloat(sliders.selfSim.value).toFixed(2);
+    valueEls.edge.textContent = parseFloat(sliders.edge.value).toFixed(2);
+    valueEls.morph.textContent = parseFloat(sliders.morph.value).toFixed(2);
+    valueEls.sharpen.textContent = parseFloat(sliders.sharpen.value).toFixed(2);
+    valueEls.contrast.textContent = parseFloat(sliders.contrast.value).toFixed(2);
+    valueEls.denoise.textContent = parseFloat(sliders.denoise.value).toFixed(2);
+  }
+
+  Object.keys(sliders).forEach(key => {
+    sliders[key].addEventListener('input', () => {
+      updateAllLabels();
+      presetBtns.forEach(b => b.classList.remove('active'));
+    });
+  });
+
+  presetBtns.forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // ==================== 状态显示 ====================
+  function setStatus(text, type = '') {
+    statusText.textContent = text;
+    statusBar.className = 'status-bar ' + type;
+  }
+  function setProgress(percent) {
+    if (percent > 0 && percent < 100) {
+      progressBar.classList.add('active');
+      progressFill.style.width = percent + '%';
+    } else {
+      progressBar.classList.remove('active');
+      progressFill.style.width = '0%';
+    }
+  }
+
+  // ==================== 文件加载 ====================
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      setStatus('请选择有效的图片文件', 'error');
+      return;
+    }
+    originalFileName = file.name;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target.result;
+      const img = new Image();
+      img.onload = () => {
+        originalImage = img;
+        originalPreview.innerHTML = '';
+        const el = document.createElement('img');
+        el.src = dataUrl;
+        el.className = 'pixelated'; // 原图像素化显示，直观看分辨率
+        originalPreview.appendChild(el);
+        originalMeta.textContent = `${img.width}×${img.height} · ${(file.size/1024).toFixed(1)}KB`;
+
+        resultPreview.innerHTML = '<div class="empty-state">点击「开始超分重建」查看效果</div>';
+        resultMeta.textContent = '—';
+        resultDataUrl = null;
+        downloadBtn.disabled = true;
+        processBtn.disabled = false;
+
+        // 自动推荐预设
+        const minDim = Math.min(img.width, img.height);
+        if (minDim <= 80) {
+          applyPreset('micro');
+          setStatus(`⚠️ 检测到极小图 (${img.width}×${img.height})，已自动切换到「超小图」模式`, 'ready');
+        } else if (minDim <= 200) {
+          applyPreset('tiny');
+          setStatus(`检测到小图 (${img.width}×${img.height})，已切换到「极小图」模式`, 'ready');
+        } else {
+          setStatus('图片已加载 · 可调整参数后开始处理', 'ready');
+        }
+      };
+      img.onerror = () => setStatus('图片加载失败', 'error');
+      img.src = dataUrl;
+    };
+    reader.onerror = () => setStatus('文件读取失败', 'error');
+    reader.readAsDataURL(file);
+  }
+
+  // ==================== 工具 ====================
+  function imageToCanvas(img) {
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c;
+  }
+
+  // ==================== 双三次插值 ====================
+  function bicubicInterpolation(srcData, srcW, srcH, dstW, dstH) {
+    const dstData = new Uint8ClampedArray(dstW * dstH * 4);
+    const xRatio = srcW / dstW;
+    const yRatio = srcH / dstH;
+
+    function cubic(x) {
+      const a = -0.5;
+      x = Math.abs(x);
+      if (x <= 1) return (a + 2) * x * x * x - (a + 3) * x * x + 1;
+      if (x < 2) return a * x * x * x - 5 * a * x * x + 8 * a * x - 4 * a;
+      return 0;
+    }
+    function getPixel(x, y, c) {
+      x = Math.min(Math.max(x, 0), srcW - 1);
+      y = Math.min(Math.max(y, 0), srcH - 1);
+      return srcData[(y * srcW + x) * 4 + c];
+    }
+
+    for (let y = 0; y < dstH; y++) {
+      const srcY = y * yRatio;
+      const y0 = Math.floor(srcY);
+      const dy = srcY - y0;
+      for (let x = 0; x < dstW; x++) {
+        const srcX = x * xRatio;
+        const x0 = Math.floor(srcX);
+        const dx = srcX - x0;
+        for (let c = 0; c < 4; c++) {
+          let val = 0;
+          for (let m = -1; m <= 2; m++) {
+            for (let n = -1; n <= 2; n++) {
+              val += getPixel(x0 + n, y0 + m, c) * cubic(m - dx) * cubic(dy - n);
+            }
+          }
+          dstData[(y * dstW + x) * 4 + c] = Math.min(255, Math.max(0, val));
+        }
+      }
+    }
+    return dstData;
+  }
+
+  // ==================== 高斯模糊 ====================
+  function gaussianBlur(data, w, h, radius) {
+    if (radius < 0.3) return data;
+    const sigma = radius / 2;
+    const kernelSize = Math.ceil(radius * 3) * 2 + 1;
+    const kernel = new Float32Array(kernelSize);
+    const half = Math.floor(kernelSize / 2);
+    let sum = 0;
+    for (let i = 0; i < kernelSize; i++) {
+      const x = i - half;
+      kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+      sum += kernel[i];
+    }
+    for (let i = 0; i < kernelSize; i++) kernel[i] /= sum;
+
+    const temp = new Float32Array(data.length);
+    const result = new Uint8ClampedArray(data.length);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let k = -half; k <= half; k++) {
+          const px = Math.min(Math.max(x + k, 0), w - 1);
+          const idx = (y * w + px) * 4;
+          const weight = kernel[k + half];
+          r += data[idx] * weight;
+          g += data[idx + 1] * weight;
+          b += data[idx + 2] * weight;
+          a += data[idx + 3] * weight;
+        }
+        const outIdx = (y * w + x) * 4;
+        temp[outIdx] = r; temp[outIdx+1] = g; temp[outIdx+2] = b; temp[outIdx+3] = a;
+      }
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let r = 0, g = 0, b = 0, a = 0;
+        for (let k = -half; k <= half; k++) {
+          const py = Math.min(Math.max(y + k, 0), h - 1);
+          const idx = (py * w + x) * 4;
+          const weight = kernel[k + half];
+          r += temp[idx] * weight;
+          g += temp[idx + 1] * weight;
+          b += temp[idx + 2] * weight;
+          a += temp[idx + 3] * weight;
+        }
+        const outIdx = (y * w + x) * 4;
+        result[outIdx] = r; result[outIdx+1] = g; result[outIdx+2] = b; result[outIdx+3] = a;
+      }
+    }
+    return result;
+  }
+
+  // ==================== 边缘导向插值（核心 1） ====================
+  // 沿边缘方向插值，而不是横竖插值，避免锯齿
+  function edgeDirectedInterpolation(srcData, srcW, srcH, dstW, dstH, edgeStrength) {
+    const dstData = new Uint8ClampedArray(dstW * dstH * 4);
+    const xRatio = srcW / dstW;
+    const yRatio = srcH / dstH;
+
+    function getPixel(x, y, c) {
+      x = Math.min(Math.max(x, 0), srcW - 1);
+      y = Math.min(Math.max(y, 0), srcH - 1);
+      return srcData[(y * srcW + x) * 4 + c];
+    }
+
+    for (let y = 0; y < dstH; y++) {
+      const srcY = y * yRatio;
+      const y0 = Math.floor(srcY);
+      const dy = srcY - y0;
+
+      for (let x = 0; x < dstW; x++) {
+        const srcX = x * xRatio;
+        const x0 = Math.floor(srcX);
+        const dx = srcX - x0;
+
+        // 计算局部梯度方向
+        const gx = getPixel(x0 + 1, y0, 0) - getPixel(x0 - 1, y0, 0)
+                 + getPixel(x0 + 1, y0 + 1, 0) - getPixel(x0 - 1, y0 + 1, 0);
+        const gy = getPixel(x0, y0 + 1, 0) - getPixel(x0, y0 - 1, 0)
+                 + getPixel(x0 + 1, y0 + 1, 0) - getPixel(x0 + 1, y0 - 1, 0);
+        const mag = Math.sqrt(gx * gx + gy * gy);
+        const edge = Math.min(1, mag / 255);
+
+        // 如果边缘很强，沿边缘方向插值
+        if (edge > 0.15 && edgeStrength > 0.01) {
+          const angle = Math.atan2(gy, gx);
+          const dirX = Math.cos(angle);
+          const dirY = Math.sin(angle);
+
+          // 沿边缘方向采样两个点
+          const offset = 0.5;
+          const p1x = srcX + dirX * offset;
+          const p1y = srcY + dirY * offset;
+          const p2x = srcX - dirX * offset;
+          const p2y = srcY - dirY * offset;
+
+          const x1 = Math.floor(p1x), y1 = Math.floor(p1y);
+          const x2 = Math.floor(p2x), y2 = Math.floor(p2y);
+
+          const blend = edge * edgeStrength * 0.8;
+
+          for (let c = 0; c < 4; c++) {
+            const v1 = getPixel(x1, y1, c);
+            const v2 = getPixel(x2, y2, c);
+            const edgeVal = (v1 + v2) / 2;
+
+            // 双线性插值值
+            const bilinear =
+              getPixel(x0, y0, c) * (1-dx) * (1-dy) +
+              getPixel(x0+1, y0, c) * dx * (1-dy) +
+              getPixel(x0, y0+1, c) * (1-dx) * dy +
+              getPixel(x0+1, y0+1, c) * dx * dy;
+
+            dstData[(y * dstW + x) * 4 + c] = bilinear * (1 - blend) + edgeVal * blend;
+          }
+        } else {
+          // 普通双线性插值
+          for (let c = 0; c < 4; c++) {
+            const bilinear =
+              getPixel(x0, y0, c) * (1-dx) * (1-dy) +
+              getPixel(x0+1, y0, c) * dx * (1-dy) +
+              getPixel(x0, y0+1, c) * (1-dx) * dy +
+              getPixel(x0+1, y0+1, c) * dx * dy;
+            dstData[(y * dstW + x) * 4 + c] = bilinear;
+          }
+        }
+      }
+    }
+    return dstData;
+  }
+
+  // ==================== 自相似纹理重建（核心 2） ====================
+  // 从原图中寻找与当前块相似的块，用其高频信息补全
+  function selfSimilarityReconstruction(srcData, srcW, srcH, dstData, dstW, dstH, strength) {
+    if (strength <= 0.01) return dstData;
+
+    // 1. 提取原图高频层
+    const blurred = gaussianBlur(srcData, srcW, srcH, 1.0);
+    const highFreq = new Float32Array(srcW * srcH * 3);
+    for (let i = 0; i < srcW * srcH; i++) {
+      for (let c = 0; c < 3; c++) {
+        highFreq[i * 3 + c] = srcData[i * 4 + c] - blurred[i * 4 + c];
+      }
+    }
+
+    // 2. 对目标图每个像素，找到原图中对应位置附近的高频块
+    //    用原图的高频"粘贴"到目标图上，形成细节
+    const result = new Uint8ClampedArray(dstData);
+    const patchSize = 3; // 3x3 块
+    const halfPatch = Math.floor(patchSize / 2);
+
+    for (let y = 0; y < dstH; y++) {
+      const srcY = Math.round((y / dstH) * srcH);
+      for (let x = 0; x < dstW; x++) {
+        const srcX = Math.round((x / dstW) * srcW);
+        const idx = (y * dstW + x) * 4;
+
+        // 计算局部梯度
+        let edge = 0;
+        if (x > 0 && x < dstW - 1 && y > 0 && y < dstH - 1) {
+          const l = (y * dstW + x - 1) * 4;
+          const r = (y * dstW + x + 1) * 4;
+          const t = ((y - 1) * dstW + x) * 4;
+          const b = ((y + 1) * dstW + x) * 4;
+          for (let c = 0; c < 3; c++) {
+            edge += Math.abs(dstData[r + c] - dstData[l + c]) +
+                    Math.abs(dstData[b + c] - dstData[t + c]);
+          }
+        }
+        edge = Math.min(1, edge / 200);
+
+        // 平坦区少加，边缘区多加
+        const adaptive = 0.3 + edge * 1.5;
+
+        // 从原图的高频层中采样
+        for (let c = 0; c < 3; c++) {
+          let hf = 0;
+          let count = 0;
+          for (let py = -halfPatch; py <= halfPatch; py++) {
+            for (let px = -halfPatch; px <= halfPatch; px++) {
+              const sx = Math.min(Math.max(srcX + px, 0), srcW - 1);
+              const sy = Math.min(Math.max(srcY + py, 0), srcH - 1);
+              hf += highFreq[(sy * srcW + sx) * 3 + c];
+              count++;
+            }
+          }
+          hf /= count;
+
+          const val = dstData[idx + c] + hf * strength * adaptive * 2.0;
+          result[idx + c] = Math.min(255, Math.max(0, val));
+        }
+      }
+    }
+    return result;
+  }
+
+  // ==================== 形态学细节提取（核心 3） ====================
+  function morphologicalDetail(data, w, h, strength) {
+    if (strength <= 0.01) return data;
+
+    // 灰度化
+    const gray = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      gray[i] = 0.299 * data[i*4] + 0.587 * data[i*4+1] + 0.114 * data[i*4+2];
+    }
+
+    // 形态学梯度 = 膨胀 - 腐蚀
+    const gradient = new Float32Array(w * h);
+    const kernelSize = 3;
+    const half = Math.floor(kernelSize / 2);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let maxV = -Infinity, minV = Infinity;
+        for (let ky = -half; ky <= half; ky++) {
+          for (let kx = -half; kx <= half; kx++) {
+            const py = Math.min(Math.max(y + ky, 0), h - 1);
+            const px = Math.min(Math.max(x + kx, 0), w - 1);
+            const v = gray[py * w + px];
+            if (v > maxV) maxV = v;
+            if (v < minV) minV = v;
+          }
+        }
+        gradient[y * w + x] = maxV - minV;
+      }
+    }
+
+    // 将梯度作为细节，叠加到原图上
+    const result = new Uint8ClampedArray(data);
+    for (let i = 0; i < w * h; i++) {
+      const g = gradient[i] / 255;
+      const detailAmount = g * strength * 60;
+      for (let c = 0; c < 3; c++) {
+        const orig = data[i*4 + c];
+        // 用梯度增强局部对比
+        const enhanced = orig + (orig - 128) * g * strength * 0.5 + detailAmount * (orig > 128 ? 1 : -1);
+        result[i*4 + c] = Math.min(255, Math.max(0, enhanced));
+      }
+    }
+    return result;
+  }
+
+  // ==================== 感知锐化 ====================
+  function perceptualSharpen(data, w, h, amount) {
+    if (amount <= 0.01) return data;
+    const blurred = gaussianBlur(data, w, h, 1.0);
+    const result = new Uint8ClampedArray(data.length);
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = (y * w + x) * 4;
+        // 计算局部亮度
+        let lum = 0;
+        if (x > 0 && x < w - 1 && y > 0 && y < h - 1) {
+          const l = (y * w + x - 1) * 4;
+          const r = (y * w + x + 1) * 4;
+          const t = ((y - 1) * w + x) * 4;
+          const b = ((y + 1) * w + x) * 4;
+          // 感知权重：中等亮度区域锐化最强（人眼最敏感）
+          const avgLum = (data[l] + data[r] + data[t] + data[b]) / 4;
+          const perc = 1 - Math.abs(avgLum - 128) / 128;
+          lum = 0.3 + perc * 0.7;
+        } else {
+          lum = 0.5;
+        }
+
+        for (let c = 0; c < 3; c++) {
+          const hf = data[idx + c] - blurred[idx + c];
+          result[idx + c] = Math.min(255, Math.max(0, data[idx + c] + hf * amount * lum * 3.0));
+        }
+        result[idx + 3] = data[idx + 3];
+      }
+    }
+    return result;
+  }
+
+  // ==================== 局部对比度增强 ====================
+  function localContrastEnhance(data, w, h, strength) {
+    if (strength <= 0.01) return data;
+    const result = new Uint8ClampedArray(data);
+    const tileSize = 48;
+    const tilesX = Math.ceil(w / tileSize);
+    const tilesY = Math.ceil(h / tileSize);
+    const clipLimit = 2.5 + strength * 2;
+
+    const maps = [];
+    for (let ty = 0; ty < tilesY; ty++) {
+      for (let tx = 0; tx < tilesX; tx++) {
+        const x0 = tx * tileSize;
+        const y0 = ty * tileSize;
+        const x1 = Math.min(x0 + tileSize, w);
+        const y1 = Math.min(y0 + tileSize, h);
+
+        const histR = new Array(256).fill(0);
+        const histG = new Array(256).fill(0);
+        const histB = new Array(256).fill(0);
+
+        for (let y = y0; y < y1; y += 2) {
+          for (let x = x0; x < x1; x += 2) {
+            const idx = (y * w + x) * 4;
+            histR[data[idx]]++;
+            histG[data[idx+1]]++;
+            histB[data[idx+2]]++;
+          }
+        }
+
+        function clipAndMap(hist) {
+          const clipped = new Array(256);
+          let excess = 0;
+          for (let i = 0; i < 256; i++) {
+            if (hist[i] > clipLimit) {
+              excess += hist[i] - clipLimit;
+              clipped[i] = clipLimit;
+            } else clipped[i] = hist[i];
+          }
+          const add = excess / 256;
+          const cdf = new Array(256);
+          let sum = 0;
+          for (let i = 0; i < 256; i++) {
+            sum += clipped[i] + add;
+            cdf[i] = sum;
+          }
+          const total = sum;
+          const map = new Array(256);
+          for (let i = 0; i < 256; i++) {
+            const eq = (cdf[i] / total) * 255;
+            map[i] = i * (1 - strength * 0.7) + eq * strength * 0.7;
+          }
+          return map;
+        }
+
+        maps.push({
+          x0, y0, x1, y1,
+          mapR: clipAndMap(histR),
+          mapG: clipAndMap(histG),
+          mapB: clipAndMap(histB),
+        });
+      }
+    }
+
+    const mapW = tilesX;
+    const mapH = tilesY;
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const fx = (x / tileSize) - 0.5;
+        const fy = (y / tileSize) - 0.5;
+        const tx0 = Math.max(0, Math.min(mapW - 1, Math.floor(fx)));
+        const ty0 = Math.max(0, Math.min(mapH - 1, Math.floor(fy)));
+        const tx1 = Math.min(mapW - 1, tx0 + 1);
+        const ty1 = Math.min(mapH - 1, ty0 + 1);
+        const dx = Math.max(0, Math.min(1, fx - tx0));
+        const dy = Math.max(0, Math.min(1, fy - ty0));
+
+        const t00 = maps[ty0 * mapW + tx0];
+        const t10 = maps[ty0 * mapW + tx1];
+        const t01 = maps[ty1 * mapW + tx0];
+        const t11 = maps[ty1 * mapW + tx1];
+
+        const idx = (y * w + x) * 4;
+        const r = data[idx], g = data[idx+1], b = data[idx+2];
+
+        const r00 = t00.mapR[r], r10 = t10.mapR[r], r01 = t01.mapR[r], r11 = t11.mapR[r];
+        const g00 = t00.mapG[g], g10 = t10.mapG[g], g01 = t01.mapG[g], g11 = t11.mapG[g];
+        const b00 = t00.mapB[b], b10 = t10.mapB[b], b01 = t01.mapB[b], b11 = t11.mapB[b];
+
+        const w00 = (1-dx)*(1-dy), w10 = dx*(1-dy), w01 = (1-dx)*dy, w11 = dx*dy;
+
+        result[idx]   = r00*w00 + r10*w10 + r01*w01 + r11*w11;
+        result[idx+1] = g00*w00 + g10*w10 + g01*w01 + g11*w11;
+        result[idx+2] = b00*w00 + b10*w10 + b01*w01 + b11*w11;
+      }
+    }
+    return result;
+  }
+
+  // ==================== 主处理流程 ====================
+  async function processImage() {
+    if (!originalImage || isProcessing) return;
+    isProcessing = true;
+    processBtn.disabled = true;
+    downloadBtn.disabled = true;
+    setStatus('正在超分重建...', 'working');
+    setProgress(5);
+    await new Promise(r => setTimeout(r, 40));
+
+    try {
+      const scale = parseFloat(sliders.scale.value);
+      const selfSim = parseFloat(sliders.selfSim.value);
+      const edge = parseFloat(sliders.edge.value);
+      const morph = parseFloat(sliders.morph.value);
+      const sharpen = parseFloat(sliders.sharpen.value);
+      const contrast = parseFloat(sliders.contrast.value);
+      const denoise = parseFloat(sliders.denoise.value);
+
+      const srcW = originalImage.width;
+      const srcH = originalImage.height;
+
+      // 限制输出最大尺寸（针对极小图，放大后不能太大）
+      const MAX_DIM = 1600;
+      let dstW = Math.round(srcW * scale);
+      let dstH = Math.round(srcH * scale);
+      if (dstW > MAX_DIM || dstH > MAX_DIM) {
+        const r = Math.min(MAX_DIM / dstW, MAX_DIM / dstH);
+        dstW = Math.round(dstW * r);
+        dstH = Math.round(dstH * r);
+        setStatus(`⚠️ 输出尺寸已限制到 ${dstW}×${dstH}`, 'working');
+      }
+
+      // 1. 读取原图
+      setStatus('步骤 1/6: 读取原图...', 'working');
+      setProgress(10);
+      await new Promise(r => setTimeout(r, 20));
+
+      const srcCanvas = imageToCanvas(originalImage);
+      const srcCtx = srcCanvas.getContext('2d');
+      let srcData = srcCtx.getImageData(0, 0, srcW, srcH).data;
+      let processed = new Uint8ClampedArray(srcData);
+
+      // 2. 降噪
+      if (denoise > 0.01) {
+        setStatus('步骤 2/6: 降噪...', 'working');
+        setProgress(20);
+        await new Promise(r => setTimeout(r, 30));
+        processed = gaussianBlur(processed, srcW, srcH, denoise * 1.0);
+      }
+
+      // 3. 插值放大（双三次）
+      setStatus(`步骤 3/6: 插值放大至 ${dstW}×${dstH}...`, 'working');
+      setProgress(35);
+      await new Promise(r => setTimeout(r, 30));
+      let finalData = bicubicInterpolation(processed, srcW, srcH, dstW, dstH);
+
+      // 4. 边缘导向插值（在双三次基础上进一步优化边缘）
+      if (edge > 0.01) {
+        setStatus('步骤 4/6: 边缘导向优化...', 'working');
+        setProgress(50);
+        await new Promise(r => setTimeout(r, 40));
+        finalData = edgeDirectedInterpolation(processed, srcW, srcH, dstW, dstH, edge);
+      }
+
+      // 5. 自相似纹理重建（核心！从原图提取高频补全）
+      if (selfSim > 0.01) {
+        setStatus('步骤 5/6: 自相似纹理重建...', 'working');
+        setProgress(65);
+        await new Promise(r => setTimeout(r, 40));
+        finalData = selfSimilarityReconstruction(
+          processed, srcW, srcH,
+          finalData, dstW, dstH,
+          selfSim
+        );
+      }
+
+      // 6. 形态学细节
+      if (morph > 0.01) {
+        setStatus('步骤 6/6: 形态学细节增强...', 'working');
+        setProgress(75);
+        await new Promise(r => setTimeout(r, 40));
+        finalData = morphologicalDetail(finalData, dstW, dstH, morph);
+      }
+
+      // 7. 感知锐化
+      if (sharpen > 0.01) {
+        setStatus('最终步骤: 感知锐化...', 'working');
+        setProgress(85);
+        await new Promise(r => setTimeout(r, 40));
+        finalData = perceptualSharpen(finalData, dstW, dstH, sharpen);
+      }
+
+      // 8. 局部对比度
+      if (contrast > 0.01) {
+        setStatus('最终步骤: 对比度增强...', 'working');
+        setProgress(95);
+        await new Promise(r => setTimeout(r, 40));
+        finalData = localContrastEnhance(finalData, dstW, dstH, contrast);
+      }
+
+      // 输出
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = dstW;
+      outCanvas.height = dstH;
+      const outCtx = outCanvas.getContext('2d');
+      const outImageData = outCtx.createImageData(dstW, dstH);
+      outImageData.data.set(finalData);
+      outCtx.putImageData(outImageData, 0, 0);
+
+      resultDataUrl = outCanvas.toDataURL('image/jpeg', 0.95);
+
+      resultPreview.innerHTML = '';
+      const resultImg = document.createElement('img');
+      resultImg.src = resultDataUrl;
+      resultPreview.appendChild(resultImg);
+      resultMeta.textContent = `${dstW}×${dstH} · 已超分`;
+      downloadBtn.disabled = false;
+      setStatus(`✅ 完成 · ${srcW}×${srcH} → ${dstW}×${dstH} (${(dstW/srcW).toFixed(1)}×)`, 'done');
+      setProgress(100);
+      setTimeout(() => setProgress(0), 500);
+
+    } catch (err) {
+      console.error(err);
+      setStatus('处理出错: ' + err.message, 'error');
+      setProgress(0);
+    } finally {
+      isProcessing = false;
+      processBtn.disabled = false;
+    }
+  }
+
+  // ==================== 下载 ====================
+  function download() {
+    if (!resultDataUrl) return;
+    const a = document.createElement('a');
+    a.href = resultDataUrl;
+    const base = originalFileName.replace(/\.[^/.]+$/, '') || 'enhanced';
+    a.download = `${base}_enhanced.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // ==================== 重置 ====================
+  function reset() {
+    originalImage = null;
+    originalFileName = '';
+    resultDataUrl = null;
+    originalPreview.innerHTML = '<div class="empty-state">等待上传图片</div>';
+    resultPreview.innerHTML = '<div class="empty-state">点击「开始超分重建」查看效果</div>';
+    originalMeta.textContent = '—';
+    resultMeta.textContent = '—';
+    fileInput.value = '';
+    processBtn.disabled = true;
+    downloadBtn.disabled = true;
+    setStatus('就绪 · 请上传图片（越小效果越明显）');
+    setProgress(0);
+    applyPreset('tiny');
+  }
+
+  // ==================== 事件绑定 ====================
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+    fileInput.value = '';
+  });
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+
+  processBtn.addEventListener('click', processImage);
+  downloadBtn.addEventListener('click', download);
+  resetBtn.addEventListener('click', reset);
+
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => e.preventDefault());
+
+  // 初始化
+  applyPreset('tiny');
+  setStatus('就绪 · 请上传图片（越小效果越明显）');
+})();
+</script>
+</body>
+</html>
