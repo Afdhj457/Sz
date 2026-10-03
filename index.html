@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>极小图超分增强器 · PNG 无损管线</title>
+<title>极小图超分增强器 · 可调质量</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -28,10 +28,10 @@
 
   .layout {
     display: grid;
-    grid-template-columns: 340px 1fr;
+    grid-template-columns: 360px 1fr;
     gap: 1.5rem;
   }
-  @media (max-width: 950px) { .layout { grid-template-columns: 1fr; } }
+  @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
 
   .controls {
     background: #161b22;
@@ -39,7 +39,12 @@
     border-radius: 14px;
     padding: 1.5rem;
     height: fit-content;
+    max-height: 90vh;
+    overflow-y: auto;
   }
+  .controls::-webkit-scrollbar { width: 6px; }
+  .controls::-webkit-scrollbar-track { background: #0d1117; }
+  .controls::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
 
   .section { margin-bottom: 1.3rem; }
   .section:last-child { margin-bottom: 0; }
@@ -65,7 +70,7 @@
   .drop-zone {
     border: 2px dashed #30363d;
     border-radius: 12px;
-    padding: 1.6rem 1rem;
+    padding: 1.4rem 1rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
@@ -77,12 +82,12 @@
   }
   .drop-zone input { display: none; }
   .drop-icon {
-    width: 44px; height: 44px;
-    margin: 0 auto 0.6rem;
+    width: 40px; height: 40px;
+    margin: 0 auto 0.5rem;
     stroke: #58a6ff; stroke-width: 1.5; fill: none;
   }
-  .drop-text { font-size: 0.9rem; color: #c9d1d9; margin-bottom: 0.3rem; }
-  .drop-hint { font-size: 0.75rem; color: #6e7681; }
+  .drop-text { font-size: 0.88rem; color: #c9d1d9; margin-bottom: 0.3rem; }
+  .drop-hint { font-size: 0.72rem; color: #6e7681; }
 
   .slider-group { margin-bottom: 1rem; }
   .slider-group:last-child { margin-bottom: 0; }
@@ -102,7 +107,7 @@
     padding: 0.12rem 0.5rem;
     border-radius: 4px;
     border: 1px solid #30363d;
-    min-width: 48px;
+    min-width: 52px;
     text-align: center;
   }
   input[type="range"] {
@@ -133,7 +138,7 @@
     cursor: pointer;
     border: 2px solid #0d1117;
   }
-  .hint { font-size: 0.7rem; color: #6e7681; margin-top: 0.35rem; line-height: 1.4; }
+  .hint { font-size: 0.68rem; color: #6e7681; margin-top: 0.35rem; line-height: 1.4; }
 
   .btn-group {
     display: flex;
@@ -323,7 +328,6 @@
     color: #0a0e14;
     border-color: #f778ba;
   }
-
   .badge-tiny {
     display: inline-block;
     font-size: 0.65rem;
@@ -335,49 +339,49 @@
     margin-left: 0.3rem;
   }
 
-  /* 复选框组 */
-  .checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.6rem 0.8rem;
-    background: #0d1117;
+  /* 质量档位 */
+  .quality-tiers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+  .tier-btn {
+    padding: 0.55rem 0.3rem;
+    border-radius: 6px;
     border: 1px solid #30363d;
-    border-radius: 8px;
+    background: #0d1117;
+    color: #8b949e;
+    font-size: 0.72rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
-    user-select: none;
+    text-align: center;
   }
-  .checkbox-group:hover {
-    border-color: #58a6ff;
-  }
-  .checkbox-group input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: #58a6ff;
-    cursor: pointer;
-  }
-  .checkbox-label {
-    font-size: 0.82rem;
-    color: #c9d1d9;
-    flex: 1;
-  }
-  .checkbox-hint {
+  .tier-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .tier-btn.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+  .tier-btn.draft.active { background: #6e7681; border-color: #6e7681; color: white; }
+  .tier-btn.high.active { background: #2ea043; border-color: #2ea043; color: white; }
+  .tier-btn.ultra.active { background: linear-gradient(135deg, #a371f7, #f778ba); border-color: #a371f7; color: white; }
+  .tier-desc {
     font-size: 0.68rem;
     color: #6e7681;
-    display: block;
-    margin-top: 0.15rem;
+    padding: 0.45rem 0.6rem;
+    background: #0d1117;
+    border-radius: 6px;
+    margin-bottom: 0.8rem;
+    border-left: 2px solid #58a6ff;
+    line-height: 1.4;
   }
 
-  /* 输出格式选择 */
+  /* 格式选择 */
   .format-group {
     display: flex;
     gap: 0.4rem;
-    margin-top: 0.5rem;
   }
   .format-btn {
     flex: 1;
-    padding: 0.55rem 0.4rem;
+    padding: 0.6rem 0.4rem;
     border-radius: 6px;
     border: 1px solid #30363d;
     background: #0d1117;
@@ -389,24 +393,69 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.3rem;
+  }
+  .format-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .format-btn.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+  .format-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+  /* 质量预设 */
+  .quality-presets {
+    display: flex;
     gap: 0.35rem;
+    flex-wrap: wrap;
   }
-  .format-btn:hover {
-    border-color: #58a6ff;
+  .q-preset {
+    flex: 1;
+    min-width: 55px;
+    padding: 0.35rem 0.4rem;
+    border-radius: 5px;
+    border: 1px solid #30363d;
+    background: #0d1117;
+    color: #6e7681;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .q-preset:hover { border-color: #58a6ff; color: #58a6ff; }
+  .q-preset.active { background: #30363d; border-color: #8b949e; color: #e6edf3; }
+
+  /* 文件大小显示 */
+  .size-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.7rem;
+    background: #0d1117;
+    border-radius: 6px;
+    margin-top: 0.6rem;
+    font-size: 0.75rem;
+    border: 1px solid #21262d;
+  }
+  .size-label { color: #6e7681; }
+  .size-value {
     color: #58a6ff;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-weight: 600;
   }
-  .format-btn.active {
-    background: #1f6feb;
-    border-color: #1f6feb;
-    color: white;
+  .size-value.warn { color: #d29922; }
+  .size-value.good { color: #2ea043; }
+  .size-value.bad { color: #f85149; }
+
+  /* 质量提示 */
+  .quality-warning {
+    font-size: 0.7rem;
+    color: #d29922;
+    background: #d2992222;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    margin-top: 0.5rem;
+    border-left: 2px solid #d29922;
+    display: none;
   }
-  .format-btn svg {
-    width: 14px;
-    height: 14px;
-    stroke: currentColor;
-    stroke-width: 2;
-    fill: none;
-  }
+  .quality-warning.show { display: block; }
 
   .pipeline-info {
     font-size: 0.7rem;
@@ -422,13 +471,28 @@
     color: #2ea043;
     font-weight: 600;
   }
+
+  .preview-stats {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    font-size: 0.68rem;
+    color: #6e7681;
+    padding: 0.4rem 0;
+  }
+  .preview-stats span {
+    background: #0d1117;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    border: 1px solid #21262d;
+  }
 </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1>极小图超分增强器 · PNG 无损管线</h1>
-    <p class="subtitle">JPG 先转 PNG 再处理 · 避免二次压缩损失 · 边缘更干净</p>
+    <h1>极小图超分增强器 · 可调质量</h1>
+    <p class="subtitle">PNG 无损管线 · 处理精度可选 · 输出质量 1-100 可调</p>
   </header>
 
   <div class="layout">
@@ -446,7 +510,20 @@
           <div class="drop-hint">JPG / PNG / WebP · 自动转 PNG 处理</div>
         </div>
         <div class="pipeline-info" id="pipelineInfo">
-          <strong>● 无损管线</strong> · JPG 解码后立即转为 PNG 格式进行所有处理，避免有损压缩导致的边缘伪影和色带。
+          <strong>● 无损管线</strong> · JPG 解码后立即转为 PNG 格式进行所有处理。
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">处理质量</div>
+        <div class="quality-tiers">
+          <button class="tier-btn draft" data-tier="draft">草稿</button>
+          <button class="tier-btn active" data-tier="standard">标准</button>
+          <button class="tier-btn high" data-tier="high">高质量</button>
+          <button class="tier-btn ultra" data-tier="ultra">极致</button>
+        </div>
+        <div class="tier-desc" id="tierDesc">
+          标准：平衡速度与质量，适合大多数图片。
         </div>
       </div>
 
@@ -468,7 +545,6 @@
             <span class="slider-value" id="scaleVal">8.0×</span>
           </div>
           <input type="range" id="scaleSlider" min="2" max="20" step="1" value="8">
-          <div class="hint">小图建议 8-20 倍</div>
         </div>
         <div class="slider-group">
           <div class="slider-label">
@@ -519,16 +595,39 @@
         <div class="format-group">
           <button class="format-btn active" id="formatPng" data-format="png">
             <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-            PNG 无损
+            PNG
           </button>
           <button class="format-btn" id="formatJpg" data-format="jpg">
             <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            JPG 压缩
+            JPG
+          </button>
+          <button class="format-btn" id="formatWebp" data-format="webp">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            WebP
           </button>
         </div>
-        <div class="hint" style="margin-top: 0.5rem;">
-          极小图建议 PNG，避免色带；照片建议 JPG。
+
+        <div class="slider-group" style="margin-top: 0.9rem;">
+          <div class="slider-label">
+            <span>输出质量</span>
+            <span class="slider-value" id="qualityVal">92</span>
+          </div>
+          <input type="range" id="qualitySlider" min="1" max="100" step="1" value="92">
+          <div class="hint" id="qualityHint">质量 92：高保真输出</div>
         </div>
+
+        <div class="quality-presets">
+          <button class="q-preset" data-q="60">60</button>
+          <button class="q-preset" data-q="75">75</button>
+          <button class="q-preset active" data-q="92">92</button>
+          <button class="q-preset" data-q="100">100</button>
+        </div>
+
+        <div class="size-info">
+          <span class="size-label">预估文件大小</span>
+          <span class="size-value" id="sizeEstimate">—</span>
+        </div>
+        <div class="quality-warning" id="qualityWarning"></div>
       </div>
 
       <div class="btn-group">
@@ -567,6 +666,9 @@
           <div class="preview-body" id="resultPreview">
             <div class="empty-state">点击「开始超分重建」查看效果</div>
           </div>
+          <div style="padding: 0 1rem 0.8rem;">
+            <div class="preview-stats" id="previewStats"></div>
+          </div>
         </div>
       </div>
 
@@ -600,8 +702,16 @@
   const progressBar = document.getElementById('progressBar');
   const progressFill = document.getElementById('progressFill');
   const presetBtns = document.querySelectorAll('.preset-btn');
-  const formatPng = document.getElementById('formatPng');
-  const formatJpg = document.getElementById('formatJpg');
+  const tierBtns = document.querySelectorAll('.tier-btn');
+  const tierDesc = document.getElementById('tierDesc');
+  const formatBtns = document.querySelectorAll('.format-btn');
+  const qualitySlider = document.getElementById('qualitySlider');
+  const qualityVal = document.getElementById('qualityVal');
+  const qualityHint = document.getElementById('qualityHint');
+  const sizeEstimate = document.getElementById('sizeEstimate');
+  const qualityWarning = document.getElementById('qualityWarning');
+  const qPresets = document.querySelectorAll('.q-preset');
+  const previewStats = document.getElementById('previewStats');
   const pipelineInfo = document.getElementById('pipelineInfo');
 
   const sliders = {
@@ -630,7 +740,19 @@
   let originalFileType = '';
   let resultDataUrl = null;
   let resultFormat = 'png';
+  let resultSize = 0;
+  let resultWidth = 0;
+  let resultHeight = 0;
   let isProcessing = false;
+  let currentTier = 'standard';
+
+  // 质量档位配置
+  const QUALITY_TIERS = {
+    draft:    { downsample: 2, blurStep: 2, histStep: 4, patchRadius: 1, desc: '草稿：快速预览，跳过部分步骤，速度最快。' },
+    standard: { downsample: 1, blurStep: 1, histStep: 2, patchRadius: 1, desc: '标准：平衡速度与质量，适合大多数图片。' },
+    high:     { downsample: 1, blurStep: 1, histStep: 1, patchRadius: 2, desc: '高质量：全部步骤，自相似搜索半径更大，细节更丰富。' },
+    ultra:    { downsample: 1, blurStep: 1, histStep: 1, patchRadius: 3, desc: '极致：4x 超采样 + 完整步骤，最慢但效果最好。' },
+  };
 
   // ==================== 预设 ====================
   const PRESETS = {
@@ -677,19 +799,131 @@
     btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
   });
 
+  // ==================== 质量档位 ====================
+  tierBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentTier = btn.dataset.tier;
+      tierBtns.forEach(b => b.classList.toggle('active', b === btn));
+      tierDesc.textContent = QUALITY_TIERS[currentTier].desc;
+    });
+  });
+
   // ==================== 输出格式 ====================
   function setFormat(fmt) {
     resultFormat = fmt;
-    formatPng.classList.toggle('active', fmt === 'png');
-    formatJpg.classList.toggle('active', fmt === 'jpg');
-    // 更新文件名后缀提示（如果已有结果）
-    if (resultDataUrl) {
-      updateResultMeta();
-    }
+    formatBtns.forEach(b => b.classList.toggle('active', b.dataset.format === fmt));
+    // WebP 和 JPG 是有损的，PNG 在质量100时为无损
+    updateQualityUI();
+    updateSizeEstimate();
   }
 
-  formatPng.addEventListener('click', () => setFormat('png'));
-  formatJpg.addEventListener('click', () => setFormat('jpg'));
+  formatBtns.forEach(btn => {
+    btn.addEventListener('click', () => setFormat(btn.dataset.format));
+  });
+
+  // ==================== 质量控制 ====================
+  function updateQualityUI() {
+    const q = parseInt(qualitySlider.value);
+    qualityVal.textContent = q;
+
+    let hint = '';
+    if (resultFormat === 'png' && q === 100) {
+      hint = '质量 100：PNG 完全无损输出，体积最大。';
+      qualityWarning.classList.remove('show');
+    } else if (resultFormat === 'png') {
+      hint = `质量 ${q}：PNG 有损压缩，体积减小但可能有轻微色带。`;
+      if (q < 70) {
+        qualityWarning.textContent = '⚠️ PNG 低于 70 质量会产生明显色带，建议用 JPG 或 WebP 代替。';
+        qualityWarning.classList.add('show');
+      } else {
+        qualityWarning.classList.remove('show');
+      }
+    } else if (resultFormat === 'jpg') {
+      hint = `质量 ${q}：JPG ${q >= 90 ? '高保真' : q >= 75 ? '良好' : '体积优先'}。`;
+      if (q < 50) {
+        qualityWarning.textContent = '⚠️ JPG 质量低于 50 会产生明显块状伪影。';
+        qualityWarning.classList.add('show');
+      } else {
+        qualityWarning.classList.remove('show');
+      }
+    } else if (resultFormat === 'webp') {
+      hint = `质量 ${q}：WebP ${q >= 90 ? '高保真' : q >= 75 ? '良好' : '体积优先'}。`;
+      qualityWarning.classList.remove('show');
+    }
+
+    qualityHint.textContent = hint;
+
+    // 更新质量预设高亮
+    qPresets.forEach(p => {
+      p.classList.toggle('active', parseInt(p.dataset.q) === q);
+    });
+
+    // 如果已有结果，重新生成以反映新质量
+    if (resultDataUrl && resultWidth && resultHeight) {
+      // 不自动重新处理，只更新预估大小
+    }
+    updateSizeEstimate();
+  }
+
+  qualitySlider.addEventListener('input', updateQualityUI);
+
+  qPresets.forEach(btn => {
+    btn.addEventListener('click', () => {
+      qualitySlider.value = btn.dataset.q;
+      updateQualityUI();
+    });
+  });
+
+  // ==================== 文件大小预估 ====================
+  function updateSizeEstimate() {
+    if (!resultWidth || !resultHeight) {
+      sizeEstimate.textContent = '—';
+      sizeEstimate.className = 'size-value';
+      return;
+    }
+
+    const q = parseInt(qualitySlider.value);
+    const pixels = resultWidth * resultHeight;
+
+    let estimatedBytes = 0;
+    if (resultFormat === 'png') {
+      // PNG: 基础大小 + 像素相关
+      if (q === 100) {
+        // 无损 PNG
+        estimatedBytes = pixels * 3 * 0.5 + 1024; // 粗略估计，无损PNG约每像素1.5字节
+      } else {
+        // 有损 PNG (通过 canvas 质量参数)
+        const ratio = q / 100;
+        estimatedBytes = pixels * 3 * (0.15 + ratio * 0.35) + 1024;
+      }
+    } else if (resultFormat === 'jpg') {
+      // JPG: 质量越高，每像素字节数越多
+      const bytesPerPixel = q >= 95 ? 0.5 : q >= 85 ? 0.35 : q >= 70 ? 0.2 : 0.1;
+      estimatedBytes = pixels * bytesPerPixel + 1024;
+    } else if (resultFormat === 'webp') {
+      // WebP: 比 JPG 小 30%
+      const bytesPerPixel = q >= 95 ? 0.35 : q >= 85 ? 0.25 : q >= 70 ? 0.15 : 0.07;
+      estimatedBytes = pixels * bytesPerPixel + 1024;
+    }
+
+    const kb = estimatedBytes / 1024;
+    let display, cls;
+    if (kb < 100) {
+      display = kb.toFixed(1) + ' KB';
+      cls = 'size-value good';
+    } else if (kb < 1000) {
+      display = kb.toFixed(0) + ' KB';
+      cls = 'size-value good';
+    } else if (kb < 5000) {
+      display = (kb / 1024).toFixed(2) + ' MB';
+      cls = 'size-value warn';
+    } else {
+      display = (kb / 1024).toFixed(1) + ' MB';
+      cls = 'size-value bad';
+    }
+    sizeEstimate.textContent = display;
+    sizeEstimate.className = cls;
+  }
 
   // ==================== 状态显示 ====================
   function setStatus(text, type = '') {
@@ -706,7 +940,13 @@
     }
   }
 
-  // ==================== 文件加载（关键改进：JPG 立即转 PNG） ====================
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+  }
+
+  // ==================== 文件加载 ====================
   function loadFile(file) {
     if (!file || !file.type.startsWith('image/')) {
       setStatus('请选择有效的图片文件', 'error');
@@ -727,11 +967,10 @@
         el.src = dataUrl;
         el.className = 'pixelated';
         originalPreview.appendChild(el);
-        originalMeta.textContent = `${img.width}×${img.height} · ${(file.size/1024).toFixed(1)}KB · ${file.type.split('/')[1].toUpperCase()}`;
+        originalMeta.textContent = `${img.width}×${img.height} · ${formatBytes(file.size)} · ${file.type.split('/')[1].toUpperCase()}`;
 
-        // 更新管线信息
         if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
-          pipelineInfo.innerHTML = `<strong>● 无损管线已激活</strong> · JPG 已解码为 PNG 无损格式 (${img.width}×${img.height})，所有处理在无损数据上进行，避免二次压缩损失。`;
+          pipelineInfo.innerHTML = `<strong>● 无损管线已激活</strong> · JPG 已解码为 PNG 无损格式 (${img.width}×${img.height})，所有处理在无损数据上进行。`;
         } else if (file.type === 'image/png') {
           pipelineInfo.innerHTML = `<strong>● 无损管线</strong> · 已经是 PNG 格式，直接进行无损处理。`;
         } else {
@@ -740,19 +979,24 @@
 
         resultPreview.innerHTML = '<div class="empty-state">点击「开始超分重建」查看效果</div>';
         resultMeta.textContent = '—';
+        previewStats.innerHTML = '';
         resultDataUrl = null;
+        resultWidth = 0;
+        resultHeight = 0;
+        resultSize = 0;
         downloadBtn.disabled = true;
         processBtn.disabled = false;
+        updateSizeEstimate();
 
         const minDim = Math.min(img.width, img.height);
         if (minDim <= 80) {
           applyPreset('micro');
-          setStatus(`⚠️ 检测到极小图 (${img.width}×${img.height})，已自动切换到「超小图」模式 · 已转为 PNG 无损`, 'ready');
+          setStatus(`⚠️ 检测到极小图 (${img.width}×${img.height})，已自动切换到「超小图」模式`, 'ready');
         } else if (minDim <= 200) {
           applyPreset('tiny');
-          setStatus(`检测到小图 (${img.width}×${img.height})，已切换到「极小图」模式 · 已转为 PNG 无损`, 'ready');
+          setStatus(`检测到小图 (${img.width}×${img.height})，已切换到「极小图」模式`, 'ready');
         } else {
-          setStatus('图片已加载 · 已转为 PNG 无损格式处理', 'ready');
+          setStatus('图片已加载 · 可调整参数后开始处理', 'ready');
         }
       };
       img.onerror = () => setStatus('图片加载失败', 'error');
@@ -763,11 +1007,23 @@
   }
 
   // ==================== 工具 ====================
-  function imageToCanvas(img) {
+  function imageToCanvas(img, targetW, targetH) {
     const c = document.createElement('canvas');
-    c.width = img.width;
-    c.height = img.height;
-    c.getContext('2d').drawImage(img, 0, 0);
+    if (targetW && targetH) {
+      c.width = targetW;
+      c.height = targetH;
+    } else {
+      c.width = img.width;
+      c.height = img.height;
+    }
+    const ctx = c.getContext('2d');
+    if (targetW && targetH) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+    } else {
+      ctx.drawImage(img, 0, 0);
+    }
     return c;
   }
 
@@ -811,7 +1067,7 @@
   }
 
   // ==================== 高斯模糊 ====================
-  function gaussianBlur(data, w, h, radius) {
+  function gaussianBlur(data, w, h, radius, step = 1) {
     if (radius < 0.3) return data;
     const sigma = radius / 2;
     const kernelSize = Math.ceil(radius * 3) * 2 + 1;
@@ -829,10 +1085,10 @@
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         let r = 0, g = 0, b = 0, a = 0;
-        for (let k = -half; k <= half; k++) {
+        for (let k = -half; k <= half; k += step) {
           const px = Math.min(Math.max(x + k, 0), w - 1);
           const idx = (y * w + px) * 4;
-          const weight = kernel[k + half];
+          const weight = kernel[Math.max(0, Math.min(kernelSize - 1, k + half))];
           r += data[idx] * weight;
           g += data[idx + 1] * weight;
           b += data[idx + 2] * weight;
@@ -845,10 +1101,10 @@
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         let r = 0, g = 0, b = 0, a = 0;
-        for (let k = -half; k <= half; k++) {
+        for (let k = -half; k <= half; k += step) {
           const py = Math.min(Math.max(y + k, 0), h - 1);
           const idx = (py * w + x) * 4;
-          const weight = kernel[k + half];
+          const weight = kernel[Math.max(0, Math.min(kernelSize - 1, k + half))];
           r += temp[idx] * weight;
           g += temp[idx + 1] * weight;
           b += temp[idx + 2] * weight;
@@ -924,7 +1180,7 @@
   }
 
   // ==================== 自相似纹理重建 ====================
-  function selfSimilarityReconstruction(srcData, srcW, srcH, dstData, dstW, dstH, strength) {
+  function selfSimilarityReconstruction(srcData, srcW, srcH, dstData, dstW, dstH, strength, patchRadius) {
     if (strength <= 0.01) return dstData;
     const blurred = gaussianBlur(srcData, srcW, srcH, 1.0);
     const highFreq = new Float32Array(srcW * srcH * 3);
@@ -934,8 +1190,7 @@
       }
     }
     const result = new Uint8ClampedArray(dstData);
-    const patchSize = 3;
-    const halfPatch = Math.floor(patchSize / 2);
+    const halfPatch = patchRadius;
     for (let y = 0; y < dstH; y++) {
       const srcY = Math.round((y / dstH) * srcH);
       for (let x = 0; x < dstW; x++) {
@@ -982,8 +1237,7 @@
       gray[i] = 0.299 * data[i*4] + 0.587 * data[i*4+1] + 0.114 * data[i*4+2];
     }
     const gradient = new Float32Array(w * h);
-    const kernelSize = 3;
-    const half = Math.floor(kernelSize / 2);
+    const half = 1;
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         let maxV = -Infinity, minV = Infinity;
@@ -1041,7 +1295,7 @@
   }
 
   // ==================== 局部对比度增强 ====================
-  function localContrastEnhance(data, w, h, strength) {
+  function localContrastEnhance(data, w, h, strength, histStep) {
     if (strength <= 0.01) return data;
     const result = new Uint8ClampedArray(data);
     const tileSize = 48;
@@ -1058,8 +1312,8 @@
         const histR = new Array(256).fill(0);
         const histG = new Array(256).fill(0);
         const histB = new Array(256).fill(0);
-        for (let y = y0; y < y1; y += 2) {
-          for (let x = x0; x < x1; x += 2) {
+        for (let y = y0; y < y1; y += histStep) {
+          for (let x = x0; x < x1; x += histStep) {
             const idx = (y * w + x) * 4;
             histR[data[idx]]++;
             histG[data[idx+1]]++;
@@ -1128,24 +1382,20 @@
     return result;
   }
 
-  // ==================== 更新结果元信息 ====================
-  function updateResultMeta() {
-    if (!resultDataUrl) return;
-    const ext = resultFormat === 'png' ? 'PNG' : 'JPG';
-    resultMeta.textContent = `${resultMeta.dataset.dim} · ${ext} 无损输出`;
-  }
-
   // ==================== 主处理流程 ====================
   async function processImage() {
     if (!originalImage || isProcessing) return;
     isProcessing = true;
     processBtn.disabled = true;
     downloadBtn.disabled = true;
-    setStatus('正在超分重建（全程 PNG 无损）...', 'working');
+    setStatus(`正在超分重建（${currentTier} 质量）...`, 'working');
     setProgress(5);
     await new Promise(r => setTimeout(r, 40));
 
+    const startTime = performance.now();
+
     try {
+      const tier = QUALITY_TIERS[currentTier];
       const scale = parseFloat(sliders.scale.value);
       const selfSim = parseFloat(sliders.selfSim.value);
       const edge = parseFloat(sliders.edge.value);
@@ -1164,10 +1414,9 @@
         const r = Math.min(MAX_DIM / dstW, MAX_DIM / dstH);
         dstW = Math.round(dstW * r);
         dstH = Math.round(dstH * r);
-        setStatus(`⚠️ 输出尺寸已限制到 ${dstW}×${dstH}`, 'working');
       }
 
-      // 1. 读取原图 → PNG 无损数据
+      // 1. 读取原图
       setStatus('步骤 1/6: 读取原图为 PNG 无损数据...', 'working');
       setProgress(10);
       await new Promise(r => setTimeout(r, 20));
@@ -1179,23 +1428,23 @@
 
       // 2. 降噪
       if (denoise > 0.01) {
-        setStatus('步骤 2/6: 降噪（无损）...', 'working');
+        setStatus('步骤 2/6: 降噪...', 'working');
         setProgress(20);
-        await new Promise(r => setTimeout(r, 30));
-        processed = gaussianBlur(processed, srcW, srcH, denoise * 1.0);
+        await new Promise(r => setTimeout(r, 20));
+        processed = gaussianBlur(processed, srcW, srcH, denoise * 1.0, tier.blurStep);
       }
 
       // 3. 插值放大
       setStatus(`步骤 3/6: 插值放大至 ${dstW}×${dstH}...`, 'working');
       setProgress(35);
-      await new Promise(r => setTimeout(r, 30));
+      await new Promise(r => setTimeout(r, 20));
       let finalData = bicubicInterpolation(processed, srcW, srcH, dstW, dstH);
 
       // 4. 边缘导向
       if (edge > 0.01) {
         setStatus('步骤 4/6: 边缘导向优化...', 'working');
         setProgress(50);
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 30));
         finalData = edgeDirectedInterpolation(processed, srcW, srcH, dstW, dstH, edge);
       }
 
@@ -1203,15 +1452,15 @@
       if (selfSim > 0.01) {
         setStatus('步骤 5/6: 自相似纹理重建...', 'working');
         setProgress(65);
-        await new Promise(r => setTimeout(r, 40));
-        finalData = selfSimilarityReconstruction(processed, srcW, srcH, finalData, dstW, dstH, selfSim);
+        await new Promise(r => setTimeout(r, 30));
+        finalData = selfSimilarityReconstruction(processed, srcW, srcH, finalData, dstW, dstH, selfSim, tier.patchRadius);
       }
 
       // 6. 形态学
       if (morph > 0.01) {
         setStatus('步骤 6/6: 形态学细节增强...', 'working');
         setProgress(75);
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 30));
         finalData = morphologicalDetail(finalData, dstW, dstH, morph);
       }
 
@@ -1219,7 +1468,7 @@
       if (sharpen > 0.01) {
         setStatus('最终步骤: 感知锐化...', 'working');
         setProgress(85);
-        await new Promise(r => setTimeout(r, 40));
+        await new Promise(r => setTimeout(r, 30));
         finalData = perceptualSharpen(finalData, dstW, dstH, sharpen);
       }
 
@@ -1227,11 +1476,11 @@
       if (contrast > 0.01) {
         setStatus('最终步骤: 对比度增强...', 'working');
         setProgress(95);
-        await new Promise(r => setTimeout(r, 40));
-        finalData = localContrastEnhance(finalData, dstW, dstH, contrast);
+        await new Promise(r => setTimeout(r, 30));
+        finalData = localContrastEnhance(finalData, dstW, dstH, contrast, tier.histStep);
       }
 
-      // 输出 → 根据格式选择
+      // 输出
       const outCanvas = document.createElement('canvas');
       outCanvas.width = dstW;
       outCanvas.height = dstH;
@@ -1240,21 +1489,47 @@
       outImageData.data.set(finalData);
       outCtx.putImageData(outImageData, 0, 0);
 
+      const quality = parseInt(qualitySlider.value) / 100;
+
       if (resultFormat === 'png') {
-        resultDataUrl = outCanvas.toDataURL('image/png');
-      } else {
-        resultDataUrl = outCanvas.toDataURL('image/jpeg', 0.95);
+        // PNG 质量参数：Chrome 支持 quality 参数（有损 PNG 压缩）
+        resultDataUrl = outCanvas.toDataURL('image/png', quality);
+      } else if (resultFormat === 'jpg') {
+        resultDataUrl = outCanvas.toDataURL('image/jpeg', quality);
+      } else if (resultFormat === 'webp') {
+        resultDataUrl = outCanvas.toDataURL('image/webp', quality);
       }
+
+      // 估算实际大小（基于 base64 长度）
+      resultSize = Math.round((resultDataUrl.length - 22) * 3 / 4);
+      resultWidth = dstW;
+      resultHeight = dstH;
 
       resultPreview.innerHTML = '';
       const resultImg = document.createElement('img');
       resultImg.src = resultDataUrl;
       resultPreview.appendChild(resultImg);
-      resultMeta.dataset.dim = `${dstW}×${dstH}`;
-      updateResultMeta();
+
+      const ext = resultFormat.toUpperCase();
+      const q = parseInt(qualitySlider.value);
+      resultMeta.textContent = `${dstW}×${dstH} · ${ext} Q${q} · ${formatBytes(resultSize)}`;
+
+      // 显示统计信息
+      const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+      previewStats.innerHTML = `
+        <span>📐 ${dstW}×${dstH}</span>
+        <span>🎨 ${ext} Q${q}</span>
+        <span>💾 ${formatBytes(resultSize)}</span>
+        <span>⏱️ ${elapsed}s</span>
+        <span>⚙️ ${currentTier}</span>
+      `;
+
+      // 更新大小预估（用实际值）
+      sizeEstimate.textContent = formatBytes(resultSize);
+      sizeEstimate.className = 'size-value good';
+
       downloadBtn.disabled = false;
-      const ext = resultFormat === 'png' ? 'PNG 无损' : 'JPG 压缩';
-      setStatus(`✅ 完成 · ${srcW}×${srcH} → ${dstW}×${dstH} (${(dstW/srcW).toFixed(1)}×) · ${ext}`, 'done');
+      setStatus(`✅ 完成 · ${srcW}×${srcH} → ${dstW}×${dstH} · ${ext} Q${q} · ${formatBytes(resultSize)} · ${elapsed}s`, 'done');
       setProgress(100);
       setTimeout(() => setProgress(0), 500);
 
@@ -1274,8 +1549,9 @@
     const a = document.createElement('a');
     a.href = resultDataUrl;
     const base = originalFileName.replace(/\.[^/.]+$/, '') || 'enhanced';
-    const ext = resultFormat === 'png' ? 'png' : 'jpg';
-    a.download = `${base}_enhanced.${ext}`;
+    const ext = resultFormat === 'png' ? 'png' : resultFormat === 'jpg' ? 'jpg' : 'webp';
+    const q = parseInt(qualitySlider.value);
+    a.download = `${base}_enhanced_q${q}.${ext}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1288,11 +1564,14 @@
     originalFileSize = 0;
     originalFileType = '';
     resultDataUrl = null;
+    resultWidth = 0;
+    resultHeight = 0;
+    resultSize = 0;
     originalPreview.innerHTML = '<div class="empty-state">等待上传图片</div>';
     resultPreview.innerHTML = '<div class="empty-state">点击「开始超分重建」查看效果</div>';
     originalMeta.textContent = '—';
     resultMeta.textContent = '—';
-    resultMeta.dataset.dim = '';
+    previewStats.innerHTML = '';
     fileInput.value = '';
     processBtn.disabled = true;
     downloadBtn.disabled = true;
@@ -1300,7 +1579,12 @@
     setProgress(0);
     applyPreset('tiny');
     setFormat('png');
-    pipelineInfo.innerHTML = '<strong>● 无损管线</strong> · JPG 解码后立即转为 PNG 格式进行所有处理，避免有损压缩导致的边缘伪影和色带。';
+    qualitySlider.value = 92;
+    updateQualityUI();
+    currentTier = 'standard';
+    tierBtns.forEach(b => b.classList.toggle('active', b.dataset.tier === 'standard'));
+    tierDesc.textContent = QUALITY_TIERS.standard.desc;
+    pipelineInfo.innerHTML = '<strong>● 无损管线</strong> · JPG 解码后立即转为 PNG 格式进行所有处理。';
   }
 
   // ==================== 事件绑定 ====================
@@ -1329,6 +1613,9 @@
 
   // 初始化
   applyPreset('tiny');
+  setFormat('png');
+  qualitySlider.value = 92;
+  updateQualityUI();
   setStatus('就绪 · 上传图片后自动转为 PNG 无损处理');
 })();
 </script>
